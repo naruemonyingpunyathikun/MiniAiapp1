@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teachable Machine Image Classifier</title>
+    <!-- นำเข้าฟอนต์ Google Font ให้ดูทันสมัย -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
+    <!-- นำเข้า Icon สำหรับปุ่ม -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --primary-color: #1e6b65;
+            --secondary-color: #2a9d8f;
+            --bg-color: #f0f2f5;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+        }
+
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .container {
+            background: var(--card-bg);
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            padding: 40px;
+            width: 100%;
+            max-width: 850px;
+            text-align: center;
+        }
+
+        h2 {
+            color: var(--primary-color);
+            font-size: 2rem;
+            margin-bottom: 30px;
+            font-weight: 600;
+        }
+
+        /* ส่วนของปุ่มควบคุม */
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 35px;
+            flex-wrap: wrap;
+        }
+
+        button, .btn-upload {
+            font-family: 'Sarabun', sans-serif;
+            font-size: 16px;
+            font-weight: 600;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .btn-webcam {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-webcam:hover {
+            background-color: #144944;
+        }
+
+        .btn-upload-label {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+
+        .btn-upload-label:hover {
+            background-color: #218074;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        /* ส่วนแสดงเนื้อหาแบบสองฝั่ง */
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 650px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .content-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .box-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        /* พื้นที่แสดงรูปภาพ/เว็บแคม */
+        .display-area {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            max-width: 300px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            overflow: hidden;
+            background-color: #fafafa;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .display-area canvas, .display-area img {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover;
+        }
+
+        .placeholder-text {
+            color: #aaa;
+            font-size: 14px;
+            padding: 20px;
+        }
+
+        /* ส่วนแสดงผลลัพธ์ (Prediction Bars) */
+        .result-box {
+            width: 100%;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 20px;
+            box-sizing: border-box;
+            background-color: #ffffff;
+            text-align: left;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 200px;
+        }
+
+        .prediction-item {
+            margin-bottom: 15px;
+        }
+
+        .prediction-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .label-text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            background-color: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            height: 12px;
+        }
+
+        .progress-bar {
+            background-color: #007bff;
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 10px;
+        }
+
+        .footer {
+            margin-top: 40px;
+            font-size: 12px;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Teachable Machine Image Classifier</h2>
+
+        <!-- ปุ่มควบคุม -->
+        <div class="btn-group">
+            <button class="btn-webcam" onclick="startWebcam()">
+                <i class="fa-solid fa-camera"></i> เปิดกล้อง (Start Webcam)
+            </button>
+            
+            <label class="btn-upload btn-upload-label" for="imageUpload">
+                <i class="fa-solid fa-cloud-arrow-up"></i> อัปโหลดรูป (Upload Image)
+            </label>
+            <input type="file" id="imageUpload" accept="image/*" onchange="handleImageUpload(event)">
+        </div>
+
+        <!-- ส่วนแสดงผล -->
+        <div class="main-content">
+            <!-- ฝั่งซ้าย: กล้องหรือรูปภาพ -->
+            <div class="content-box">
+                <div class="box-title" id="view-title">กรุณาเลือกช่องทางนำเข้าภาพ</div>
+                <div class="display-area" id="media-container">
+                    <div class="placeholder-text" id="placeholder">กล้องหรือรูปภาพจะแสดงที่นี่</div>
+                    <img id="image-preview" style="display: none;" alt="Preview">
+                </div>
+            </div>
+
+            <!-- ฝั่งขวา: ผลลัพธ์คำทำนาย -->
+            <div class="content-box">
+                <div class="box-title">ผลลัพธ์ (Prediction Results)</div>
+                <div class="result-box" id="label-container">
+                    <div class="placeholder-text" style="text-align: center;">รอการประมวลผล...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">Powered by TensorFlow.js | TM v2</div>
+    </div>
+
+    <!-- โหลดไลบรารีที่จำเป็น -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+
+    <script type="text/javascript">
+        // ลิงก์โมเดล Teachable Machine ของคุณ
+        const URL = "https://teachablemachine.withgoogle.com/models/bYgWWG7NH/";
+
+        let model, webcam, labelContainer, maxPredictions;
+        let isWebcamActive = false;
+        let animationFrameId;
+
+        // โหลดโมเดลอัตโนมัติเมื่อเปิดหน้าเว็บ
+        async function loadModel() {
+            const modelURL = URL + "model.json";
+            const metadataURL = URL + "metadata.json";
+            model = await tmImage.load(modelURL, metadataURL);
+            maxPredictions = model.getTotalClasses();
+        }
+        loadModel();
+
+        // --- โหมดเปิดกล้อง (Webcam Mode) ---
+        async function startWebcam() {
+            // หยุดโหมดอัปโหลดรูปภาพหรือเว็ปแคมเดิมก่อน
+            stopWebcam();
+            document.getElementById("image-preview").style.display = "none";
+            document.getElementById("placeholder").style.display = "none";
+            
+            document.getElementById("view-title").innerText = "เว็บแคม (Webcam Feed)";
+
+            if (!model) await loadModel();
+
+            const flip = true; 
+            webcam = new tmImage.Webcam(300, 300, flip); 
+            
+            try {
+                await webcam.setup(); 
+                await webcam.play();
+                isWebcamActive = true;
+                
+                const mediaContainer = document.getElementById("media-container");
+                mediaContainer.innerHTML = ""; 
+                mediaContainer.appendChild(webcam.canvas);
+
+                initLabelContainer();
+                window.requestAnimationFrame(webcamLoop);
+            } catch (err) {
+                alert("ไม่สามารถเปิดกล้องได้ กรุณาตรวจสอบสิทธิ์การเข้าถึงกล้อง หรือใช้ Local Server");
+                console.error(err);
+            }
+        }
+
+        async function webcamLoop() {
+            if (!isWebcamActive) return;
+            webcam.update(); 
+            await predict(webcam.canvas);
+            animationFrameId = window.requestAnimationFrame(webcamLoop);
+        }
+
+        function stopWebcam() {
+            isWebcamActive = false;
+            if (animationFrameId) {
+                window.cancelAnimationFrame(animationFrameId);
+            }
+            if (webcam) {
+                webcam.stop();
+            }
+        }
+
+        // --- โหมดอัปโหลดรูปภาพ (Upload Image Mode) ---
+        async function handleImageUpload(event) {
+            stopWebcam(); // หยุดกล้องถ้าเปิดอยู่
+            
+            const file = event.target.files[0];
+            if (!file) return;
+
+            document.getElementById("view-title").innerText = "รูปภาพที่อัปโหลด (Uploaded Image)";
+            
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const imgElement = document.getElementById("image-preview");
+                imgElement.src = e.target.result;
+                imgElement.style.display = "block";
+                
+                const mediaContainer = document.getElementById("media-container");
+                mediaContainer.innerHTML = "";
+                mediaContainer.appendChild(imgElement);
+
+                document.getElementById("placeholder").style.display = "none";
+
+                if (!model) await loadModel();
+                initLabelContainer();
+                
+                // รอให้รูปภาพโหลดเสร็จใน DOM ก่อนส่งไปประมวลผล
+                imgElement.onload = async () => {
+                    await predict(imgElement);
+                };
+            }
+            reader.readAsDataURL(file);
+        }
+
+        // --- ระบบแสดงผลลัพธ์ (UI & Prediction) ---
+        function initLabelContainer() {
+            labelContainer = document.getElementById("label-container");
+            labelContainer.innerHTML = ""; 
+            for (let i = 0; i < maxPredictions; i++) {
+                const item = document.createElement("div");
+                item.className = "prediction-item";
+                item.innerHTML = `
+                    <div class="label-text">
+                        <span class="class-name">Loading...</span>
+                        <span class="probability-val">0.0%</span>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar"></div>
+                    </div>
+                `;
+                labelContainer.appendChild(item);
+            }
+        }
+
+        async function predict(inputMedia) {
+            const prediction = await model.predict(inputMedia);
+            
+            for (let i = 0; i < maxPredictions; i++) {
+                const className = prediction[i].className;
+                const probabilityPercentage = (prediction[i].probability * 100).toFixed(1);
+                
+                const item = labelContainer.childNodes[i];
+                if (item && item.querySelector) {
+                    item.querySelector(".class-name").innerText = className;
+                    item.querySelector(".probability-val").innerText = probabilityPercentage + "%";
+                    item.querySelector(".progress-bar").style.width = probabilityPercentage + "%";
+                }
+            }
+        }
+    </script>
+</body>
+</html>
